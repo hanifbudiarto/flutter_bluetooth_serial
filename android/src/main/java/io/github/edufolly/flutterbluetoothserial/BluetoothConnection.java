@@ -1,18 +1,17 @@
 package io.github.edufolly.flutterbluetoothserial;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.UUID;
-import java.util.Arrays;
-
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.UUID;
+
 /// Universal Bluetooth serial connection class (for Java)
-public abstract class BluetoothConnection
-{
+public abstract class BluetoothConnection {
     protected static final UUID DEFAULT_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     protected BluetoothAdapter bluetoothAdapter;
@@ -24,11 +23,9 @@ public abstract class BluetoothConnection
     }
 
 
-
     public BluetoothConnection(BluetoothAdapter bluetoothAdapter) {
         this.bluetoothAdapter = bluetoothAdapter;
     }
-
 
 
     // @TODO . `connect` could be done perfored on the other thread
@@ -36,7 +33,7 @@ public abstract class BluetoothConnection
     // @TODO . `connect` other methods than `createRfcommSocketToServiceRecord`, including hidden one raw `createRfcommSocket` (on channel).
     // @TODO ? how about turning it into factoried?
     /// Connects to given device by hardware address
-    public void connect(String address, UUID uuid) throws IOException {
+    public void connect(String address, UUID uuid, String socketType) throws IOException {
         if (isConnected()) {
             throw new IOException("already connected");
         }
@@ -46,7 +43,15 @@ public abstract class BluetoothConnection
             throw new IOException("device not found");
         }
 
-        BluetoothSocket socket = device.createRfcommSocketToServiceRecord(uuid); // @TODO . introduce ConnectionMethod
+        BluetoothSocket socket;
+        if (socketType.equals("secure")) {
+            socket = device.createRfcommSocketToServiceRecord(uuid);
+        }
+        else {
+            socket = device.createInsecureRfcommSocketToServiceRecord(uuid);
+        }
+
+        // BluetoothSocket socket = device.createRfcommSocketToServiceRecord(uuid); // @TODO . introduce ConnectionMethod
         if (socket == null) {
             throw new IOException("socket connection not established");
         }
@@ -59,11 +64,12 @@ public abstract class BluetoothConnection
         connectionThread = new ConnectionThread(socket);
         connectionThread.start();
     }
+
     /// Connects to given device by hardware address (default UUID used)
-    public void connect(String address) throws IOException {
-        connect(address, DEFAULT_UUID);
+    public void connect(String address, String socketType) throws IOException {
+        connect(address, DEFAULT_UUID, socketType);
     }
-    
+
     /// Disconnects current session (ignore if not connected)
     public void disconnect() {
         if (isConnected()) {
@@ -88,12 +94,12 @@ public abstract class BluetoothConnection
     protected abstract void onDisconnected(boolean byRemote);
 
     /// Thread to handle connection I/O
-    private class ConnectionThread extends Thread  {
+    private class ConnectionThread extends Thread {
         private final BluetoothSocket socket;
         private final InputStream input;
         private final OutputStream output;
         private boolean requestedClosing = false;
-        
+
         ConnectionThread(BluetoothSocket socket) {
             this.socket = socket;
             InputStream tmpIn = null;
@@ -130,16 +136,16 @@ public abstract class BluetoothConnection
             if (output != null) {
                 try {
                     output.close();
+                } catch (Exception e) {
                 }
-                catch (Exception e) {}
             }
 
             // Make sure input stream is closed
             if (input != null) {
                 try {
                     input.close();
+                } catch (Exception e) {
                 }
-                catch (Exception e) {}
             }
 
             // Callback on disconnected, with information which side is closing
@@ -168,8 +174,8 @@ public abstract class BluetoothConnection
             // Flush output buffers befoce closing
             try {
                 output.flush();
+            } catch (Exception e) {
             }
-            catch (Exception e) {}
 
             // Close the connection socket
             if (socket != null) {
@@ -178,8 +184,8 @@ public abstract class BluetoothConnection
                     Thread.sleep(111);
 
                     socket.close();
+                } catch (Exception e) {
                 }
-                catch (Exception e) {}
             }
         }
     }

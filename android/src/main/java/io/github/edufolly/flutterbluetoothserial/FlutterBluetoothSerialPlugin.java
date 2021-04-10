@@ -869,6 +869,20 @@ public class FlutterBluetoothSerialPlugin implements MethodCallHandler, RequestP
                     break;
                 }
 
+                if (!call.hasArgument("socketType")) {
+                    result.error("invalid_argument", "argument 'socketType' not found", null);
+                    break;
+                }
+
+                String socketType;
+                try {
+                    socketType = call.argument("socketType");
+                }
+                catch (ClassCastException ex) {
+                    result.error("invalid_argument", "'socketType' argument is required", null);
+                    break;
+                }
+
                 int id = ++lastConnectionId;
                 BluetoothConnectionWrapper connection = new BluetoothConnectionWrapper(id, bluetoothAdapter);
                 connections.put(id, connection);
@@ -877,7 +891,7 @@ public class FlutterBluetoothSerialPlugin implements MethodCallHandler, RequestP
 
                 AsyncTask.execute(() -> {
                     try {
-                        connection.connect(address);
+                        connection.connect(address, socketType);
                         registrar.activity().runOnUiThread(new Runnable() {
                             @Override 
                             public void run() {
